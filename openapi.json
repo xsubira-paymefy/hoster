@@ -1,0 +1,1247 @@
+{
+  "openapi": "3.0.4",
+  "info": {
+    "version": "0.0.5",
+    "title": "Paymefy API",
+    "description": "Paymefy platform integration API.",
+    "contact": {
+      "name": "Paymefy Development Team",
+      "email": "develop@paymefy.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "%SCHEMA_AND_HTTP_HOST%/integration/v1"
+    }
+  ],
+  "security": [
+    {
+      "OAuth2": [
+        "integration"
+      ]
+    }
+  ],
+  "components": {
+    "schemas": {
+      "CustomerId": {
+        "type": "string",
+        "description": "Your system's internal id for the customer"
+      },
+      "PayerOriginId": {
+        "type": "string",
+        "description": "Unique customer / payer code, if you use one internally (if not it can be the same DNI, NIF, or phone number)."
+      },
+      "Transaction": {
+        "type": "object",
+        "description": "",
+        "properties": {
+          "paymefy_id": {
+            "readOnly": true,
+            "type": "integer",
+            "description": "Paymefy internal id"
+          },
+          "origin_id": {
+            "type": "string",
+            "description": "Unique transaction code (e.g., your system's internal id for this transaction. If you don't have one, it can be an invoice number, order, etc. that unambiguously identifies the transaction)."
+          },
+          "reference": {
+            "type": "string",
+            "description": "A public name or reference (e.g., invoice number)"
+          },
+          "title": {
+            "type": "string",
+            "description": "A short and general description of the transaction"
+          },
+          "amount": {
+            "type": "integer",
+            "description": "Amount expressed in cents or minor currency units",
+            "example": 4325
+          },
+          "currency": {
+            "type": "string",
+            "description": "3 letter currency code as defined by ISO 4217",
+            "format": "iso-4217",
+            "example": "EUR"
+          },
+          "due_date": {
+            "type": "string",
+            "description": "Invoice, bill, etc. due date for debt payments or limit payment date for regular payments.",
+            "format": "date",
+            "example": "2017-07-21"
+          },
+          "language": {
+            "type": "string",
+            "description": "Language code as defined by ISO 639-1. Language in which the payer will be notified.",
+            "format": "iso-639-1",
+            "example": "es"
+          },
+          "concepts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Concept"
+            }
+          },
+          "payers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Payer"
+            }
+          },
+          "sepa_code": {
+            "type": "string",
+            "description": "Return code (rejection) of SEPA direct debit, provided by the bank."
+          },
+          "return_date": {
+            "type": "string",
+            "description": "Date bank returned payment",
+            "format": "date",
+            "example": "2017-07-21"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TransactionStatus"
+          },
+          "status_message": {
+            "type": "string",
+            "readOnly": true
+          },
+          "payment_method": {
+            "type": "string",
+            "description": "The payment method when status is PAID",
+            "enum": [
+              "CREDIT_CARD",
+              "BANK_TRANSFER",
+              "DIRECT_DEBIT",
+              "CASH",
+              "OTHER",
+              "PAYMEFY"
+            ],
+            "readOnly": true
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "customer_id",
+          "origin_id",
+          "title",
+          "amount",
+          "currency",
+          "due_date",
+          "language",
+          "payers",
+          "concepts"
+        ]
+      },
+      "PostTransactionRequest": {
+        "allOf": [
+          {
+            "type": "object",
+            "description": "",
+            "properties": {
+              "customer_id": {
+                "$ref": "#/components/schemas/CustomerId"
+              }
+            }
+          },
+          {
+            "$ref": "#/components/schemas/Transaction"
+          },
+          {
+            "type": "object",
+            "description": "",
+            "properties": {
+              "status": {
+                "type": "string",
+                "description": "The status of the transaction",
+                "enum": [
+                  "PENDING",
+                  "CANCELLED",
+                  "REFUSED",
+                  "PAUSED"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "PatchTransactionRequest": {
+        "type": "object",
+        "description": "",
+        "properties": {
+          "customer_id": {
+            "$ref": "#/components/schemas/CustomerId"
+          },
+          "origin_id": {
+            "type": "string",
+            "description": "Your system's internal id for this transaction"
+          },
+          "amount": {
+            "type": "integer",
+            "description": "Amount expressed in cents or minor currency units",
+            "example": 4325
+          },
+          "concepts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Concept"
+            }
+          },
+          "status": {
+            "type": "string",
+            "description": "The status of the transaction",
+            "enum": [
+              "PENDING",
+              "CANCELLED",
+              "REFUSED",
+              "PAUSED"
+            ]
+          }
+        },
+        "required": [
+          "customer_id",
+          "origin_id"
+        ]
+      },
+      "Concept": {
+        "type": "object",
+        "description": "The description and amount ...",
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "Main concept for which the payer is being charged."
+          },
+          "amount": {
+            "type": "integer",
+            "description": "Amount expressed in cents or minor currency units. Amount to be paid in relation to the concept. ",
+            "example": 4325
+          }
+        },
+        "required": [
+          "description",
+          "amount"
+        ]
+      },
+      "Payer": {
+        "type": "object",
+        "description": "The payer details",
+        "properties": {
+          "origin_id": {
+            "$ref": "#/components/schemas/PayerOriginId"
+          },
+          "tax_id": {
+            "type": "string",
+            "description": "Payer's DNI/NIE/CIF/NIF (individual or company)."
+          },
+          "short_name": {
+            "type": "string",
+            "description": "Payer's given name or trade name."
+          },
+          "full_name": {
+            "type": "string",
+            "description": "Payer's full name or legal name. "
+          },
+          "registration_date": {
+            "type": "string",
+            "description": "Payer's date of registration as customer.",
+            "format": "date",
+            "example": "2011-09-25"
+          },
+          "withdrawal_date": {
+            "type": "string",
+            "description": "Payer's date of withdrawal as customer.",
+            "format": "date",
+            "example": "2017-04-25"
+          },
+          "phone": {
+            "type": "integer",
+            "description": "Payer's phone number.",
+            "example": "34555555555"
+          },
+          "email": {
+            "type": "string",
+            "description": "Payer's email."
+          },
+          "is_company": {
+            "type": "boolean",
+            "description": "Set true if payer is company, otherwise false."
+          },
+          "street": {
+            "type": "string",
+            "description": "Payer's residency street address",
+            "example": "Gran Via de les Corts Catalanes, 999, ático 10a"
+          },
+          "city": {
+            "type": "string",
+            "description": "Payer's residency city",
+            "example": "Barcelona"
+          },
+          "zip_code": {
+            "type": "string",
+            "description": "Payer's residency zip code.",
+            "example": "08080"
+          },
+          "country": {
+            "type": "string",
+            "format": "iso-3166-1",
+            "description": "Payer's residency country code as defined by ISO 3166-1 (alpha-2)",
+            "example": "ES"
+          },
+          "birth_date": {
+            "type": "string",
+            "description": "Payer's date of birth.",
+            "format": "date",
+            "example": "1995-07-31"
+          },
+          "nationality": {
+            "type": "string",
+            "description": "Payer's nationality country code as defined by ISO 3166-1 (alpha-2)",
+            "format": "iso-3166-1",
+            "example": "ES"
+          },
+          "history": {
+            "$ref": "#/components/schemas/PayerHistoryStats"
+          }
+        },
+        "required": [
+          "origin_id",
+          "tax_id",
+          "short_name",
+          "is_company",
+          "phone",
+          "email"
+        ]
+      },
+      "PayerHistoryStats": {
+        "type": "object",
+        "description": "Payments history of the payer",
+        "properties": {
+          "paid_invoices": {
+            "type": "integer",
+            "description": "Total number of paid invoices"
+          },
+          "paid_amount": {
+            "type": "integer",
+            "description": "Total amount in paid invoices expressed in cents or minor currency units"
+          },
+          "unpaid_invoices": {
+            "type": "integer",
+            "description": "Total number of unpaid invoices"
+          },
+          "unpaid_amount": {
+            "type": "integer",
+            "description": "Total amount in unpaid invoices expressed in cents or minor currency units"
+          }
+        }
+      },
+      "TransactionPayerRequest": {
+        "allOf": [
+          {
+            "type": "object",
+            "properties": {
+              "customer_id": {
+                "$ref": "#/components/schemas/CustomerId"
+              }
+            },
+            "required": [
+              "customer_id"
+            ]
+          },
+          {
+            "$ref": "#/components/schemas/TransactionPayer"
+          },
+          {
+            "type": "object",
+            "description": "Transaction and Payer to be added to"
+          }
+        ]
+      },
+      "TransactionPayer": {
+        "allOf": [
+          {
+            "type": "object",
+            "description": "A transaction payer",
+            "properties": {
+              "payer_id": {
+                "type": "string",
+                "description": "Unique customer / payer code, if you use one internally (if not it can be the same DNI, NIF, or phone number)."
+              }
+            }
+          },
+          {
+            "$ref": "#/components/schemas/Payer"
+          },
+          {
+            "type": "object",
+            "description": "A transaction payer",
+            "properties": {
+              "origin_id": {
+                "type": "string",
+                "description": "Unique transaction code (e.g., your system's internal id for this transaction. If you don't have one, it can be an invoice number, order, etc. that unambiguously identifies the transaction)."
+              }
+            }
+          }
+        ],
+        "required": [
+          "payer_id"
+        ]
+      },
+      "TransactionStatus": {
+        "type": "string",
+        "description": "The status of the transaction",
+        "enum": [
+          "PENDING",
+          "CANCELLED",
+          "REFUSED",
+          "PAUSED",
+          "PAID"
+        ]
+      },
+      "TransactionPartialPayment": {
+        "type": "object",
+        "description": "Partial payment of a transaction",
+        "properties": {
+          "paymefy_id": {
+            "type": "string",
+            "description": "Paymefy internal id for the Payment",
+            "readOnly": true
+          },
+          "origin_id": {
+            "type": "string",
+            "description": "Your system's internal id for this transaction"
+          },
+          "payer_id": {
+            "type": "string",
+            "description": "Your system's internal id for the payer"
+          },
+          "payment_date": {
+            "type": "string",
+            "description": "Which date the payment was done",
+            "format": "date",
+            "example": "2017-07-21"
+          },
+          "payment_method": {
+            "type": "string",
+            "description": "The payment method used on this payment",
+            "enum": [
+              "CREDIT_CARD",
+              "BANK_TRANSFER",
+              "DIRECT_DEBIT",
+              "CASH",
+              "OTHER"
+            ]
+          },
+          "amount": {
+            "type": "integer",
+            "description": "The amount of this payment expressed in cents or minor currency units, using same currency as the transaction's. If equal or greater than the transaction's pending amount, its status will become PAID\n",
+            "example": "10009 (for 100.09€ if transaction currency is EUR)"
+          },
+          "concept": {
+            "type": "string",
+            "description": "The concept describing this payment on the paylink page This payment will be shown as a new substraction concept for the transaction\n"
+          },
+          "payment_reference": {
+            "type": "string",
+            "description": "Your system's internal id for this payment"
+          }
+        },
+        "required": [
+          "paymefy_id",
+          "customer_id",
+          "origin_id",
+          "payer_id",
+          "payment_method",
+          "payment_date",
+          "amount",
+          "concept"
+        ]
+      },
+      "Payment": {
+        "type": "object",
+        "description": "",
+        "properties": {
+          "customer_id": {
+            "type": "string",
+            "description": "Your system's internal id for the customer"
+          },
+          "origin_id": {
+            "type": "string",
+            "description": "Your system's internal id for this transaction"
+          },
+          "payer_id": {
+            "type": "string",
+            "description": "Your system's internal id for this payer"
+          },
+          "payment_method": {
+            "type": "string",
+            "description": "The payment method when status is PAID",
+            "enum": [
+              "CREDIT_CARD",
+              "BANK_TRANSFER",
+              "DIRECT_DEBIT",
+              "CASH",
+              "OTHER"
+            ]
+          },
+          "comments": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "customer_id",
+          "origin_id",
+          "payer_id",
+          "payment_method"
+        ]
+      },
+      "Meta": {
+        "type": "object",
+        "description": "Additional data",
+        "additionalProperties": true
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Error message"
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "Notification": {
+        "type": "object",
+        "properties": {
+          "customer_id": {
+            "type": "string",
+            "description": "The customer key"
+          },
+          "origin_id": {
+            "type": "string",
+            "description": "Unique transaction code (e.g., your system's internal id for this transaction. If you don't have one, it can be an invoice number, order, etc. that unambiguously identifies the transaction)."
+          },
+          "message_alias": {
+            "type": "string",
+            "description": "The message template alias to be sent."
+          },
+          "send_at": {
+            "type": "string",
+            "description": "Time at which the message will be sent in ISO 8601 format.",
+            "format": "date-time",
+            "example": "2020-07-19T09:47:17+01:00"
+          },
+          "substitutions": {
+            "type": "object",
+            "description": "Optional JSON object with substitution keys and values. Keys must be prefixed and suffixed with percent sign. Ex. {\"%Key1%\": \"Value1\", \"%Key2%\": \"Value2\"}"
+          }
+        },
+        "required": [
+          "customer_id",
+          "origin_id",
+          "message_alias"
+        ]
+      }
+    },
+    "requestBodies": {
+      "TransactionPayerDelete": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "allOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "customer_id": {
+                      "$ref": "#/components/schemas/CustomerId"
+                    },
+                    "origin_id": {
+                      "$ref": "#/components/schemas/PayerOriginId"
+                    }
+                  },
+                  "required": [
+                    "customer_id",
+                    "origin_id"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "title": "Payer",
+                  "description": "Payer to be removed from the transaction"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "TransactionPayerPost": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "allOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "customer_id": {
+                      "$ref": "#/components/schemas/CustomerId"
+                    }
+                  },
+                  "required": [
+                    "customer_id"
+                  ]
+                },
+                {
+                  "$ref": "#/components/schemas/Payer"
+                },
+                {
+                  "type": "object",
+                  "title": "Payer",
+                  "description": "Payer to be added to transaction"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "TransactionPartialPaymentPost": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "customer_id": {
+                  "type": "string",
+                  "description": "Your system's internal id for the customer"
+                },
+                "origin_id": {
+                  "type": "string",
+                  "description": "Your system's internal id for this transaction"
+                },
+                "payer_id": {
+                  "type": "string",
+                  "description": "Your system's internal id for this payer"
+                },
+                "payment_date": {
+                  "type": "string",
+                  "description": "Which date the payment was done",
+                  "format": "date",
+                  "example": "2017-07-21"
+                },
+                "payment_method": {
+                  "type": "string",
+                  "description": "The payment method used on this payment",
+                  "enum": [
+                    "CREDIT_CARD",
+                    "BANK_TRANSFER",
+                    "DIRECT_DEBIT",
+                    "CASH",
+                    "OTHER"
+                  ]
+                },
+                "amount": {
+                  "type": "integer",
+                  "description": "The amount of this payment expressed in cents or minor currency units, using same currency as the transaction's. If equal or greater than the transaction's pending amount, its status will become PAID\n",
+                  "example": "10009 (for 100.09€ if transaction currency is EUR)"
+                },
+                "concept": {
+                  "type": "string",
+                  "description": "The concept describing this payment on the paylink page This payment will be shown as a new substraction concept for the transaction\n"
+                },
+                "payment_reference": {
+                  "type": "string",
+                  "description": "Your system's internal id for this payment"
+                }
+              },
+              "required": [
+                "customer_id",
+                "origin_id",
+                "payer_id",
+                "payment_method",
+                "payment_date",
+                "amount",
+                "concept"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "NoContentResponse": {
+        "description": "The request was processed succesfully issuing a No Content response"
+      },
+      "TransactionPartialPayment": {
+        "description": "Transaction partial payment created",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/TransactionPartialPayment"
+            }
+          }
+        }
+      },
+      "TransactionPayer": {
+        "description": "Payer added to a transaction",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Payer"
+            }
+          }
+        }
+      },
+      "InvalidInput": {
+        "description": "Invalid input",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "InternalServerError": {
+        "description": "Internal Server Error",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Unauthorized",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "OAuth2": {
+        "type": "oauth2",
+        "flows": {
+          "clientCredentials": {
+            "tokenUrl": "/v1/oauth/token",
+            "scopes": {
+              "integration": "Allows integration endpoints"
+            }
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/transactions": {
+      "get": {
+        "tags": [
+          "Transaction"
+        ],
+        "operationId": "getTransactionCollection",
+        "summary": "Retrieves the collection of Transactions.",
+        "responses": {
+          "200": {
+            "description": "Transaction collection response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "values": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Transaction"
+                      }
+                    },
+                    "total": {
+                      "type": "integer"
+                    },
+                    "total_amount": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "offset",
+            "in": "query",
+            "required": true,
+            "description": "Number of transactions to skip",
+            "schema": {
+              "type": "integer",
+              "default": "0"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": true,
+            "description": "The number of transactions to retrieve",
+            "schema": {
+              "type": "integer",
+              "default": "150"
+            }
+          },
+          {
+            "name": "customer_id",
+            "in": "query",
+            "required": true,
+            "description": "Filter by customer id",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "origin_id",
+            "in": "query",
+            "required": false,
+            "description": "Filter by origin id",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "description": "Filter by status",
+            "schema": {
+              "$ref": "#/components/schemas/TransactionStatus"
+            }
+          },
+          {
+            "name": "due_date_from",
+            "in": "query",
+            "required": false,
+            "description": "Filter by due date and newer",
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "example": "2019-01-16"
+            }
+          },
+          {
+            "name": "due_date_to",
+            "in": "query",
+            "required": false,
+            "description": "Filter by due date and older",
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "example": "2019-01-31"
+            }
+          },
+          {
+            "name": "payment_date_from",
+            "in": "query",
+            "required": false,
+            "description": "Filter by payment date and newer",
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "example": "2019-01-16"
+            }
+          },
+          {
+            "name": "payment_date_to",
+            "in": "query",
+            "required": false,
+            "description": "Filter by payment date and older",
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "example": "2019-01-31"
+            }
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Transaction"
+        ],
+        "operationId": "postTransactionItem",
+        "summary": "Creates a Transaction.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostTransactionRequest"
+              }
+            }
+          },
+          "description": "The new Transaction resource"
+        },
+        "responses": {
+          "201": {
+            "description": "Transaction created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "transaction_id": {
+                      "type": "integer",
+                      "description": "Paymefy transaction id"
+                    }
+                  },
+                  "required": [
+                    "transaction_id"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Transaction"
+        ],
+        "operationId": "patchTransactionItem",
+        "summary": "Updates a Transaction.",
+        "requestBody": {
+          "content": {
+            "application/merge-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchTransactionRequest"
+              }
+            }
+          },
+          "description": "The updated Transaction resource"
+        },
+        "responses": {
+          "200": {
+            "description": "Transaction resource updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "transaction_id": {
+                      "type": "integer",
+                      "description": "Paymefy transaction id"
+                    }
+                  },
+                  "required": [
+                    "transaction_id"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/transactions/{transaction_origin_id}/payers": {
+      "post": {
+        "tags": [
+          "Payers"
+        ],
+        "operationId": "postTransactionPayer",
+        "summary": "Adds a Payer to transaction.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "transaction_origin_id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "Unique transaction code (e.g., your system's internal id for this transaction. If you don't have one, it can be an invoice number, order, etc. that unambiguously identifies the transaction)."
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/TransactionPayerPost",
+          "description": "The payer to add to transaction.<br/> Its contact information will be updated.\n"
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/TransactionPayer"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidInput"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Payers"
+        ],
+        "operationId": "deleteTransactionPayer",
+        "summary": "Removes a Payer from a transaction.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "transaction_origin_id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "Unique transaction code (e.g., your system's internal id for this transaction. If you don't have one, it can be an invoice number, order, etc. that unambiguously identifies the transaction)."
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/TransactionPayerDelete",
+          "description": "The payer to remove from the transaction.\n"
+        },
+        "responses": {
+          "204": {
+            "$ref": "#/components/responses/NoContentResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidInput"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/transactions/partial-payment": {
+      "post": {
+        "tags": [
+          "Transaction Payments"
+        ],
+        "operationId": "partialPayment",
+        "summary": "Partially pay a transaction",
+        "description": "",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/TransactionPartialPaymentPost"
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/TransactionPartialPayment"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidInput"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/transactions/payments": {
+      "post": {
+        "tags": [
+          "Transaction Payments"
+        ],
+        "operationId": "postTransactionPaymentItem",
+        "summary": "Mark a Transaction as paid.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payment"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Transaction payment created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "transaction_id": {
+                      "type": "integer",
+                      "description": "Paymefy transaction id"
+                    }
+                  },
+                  "required": [
+                    "transaction_id"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/transactions/notifications": {
+      "post": {
+        "tags": [
+          "Transaction Notifications"
+        ],
+        "operationId": "postTransactionNotificationItem",
+        "summary": "Send a notification to all Payers of a Transaction",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Notification"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Transaction notifications sent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "transaction_id": {
+                      "type": "integer",
+                      "description": "Paymefy transaction id"
+                    }
+                  },
+                  "required": [
+                    "transaction_id"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
